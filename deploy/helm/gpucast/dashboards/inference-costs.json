@@ -1,0 +1,203 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "title": "Inference Cost per Model (USD/request)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "gpucast_inference_cost_usd",
+          "legendFormat": "{{ model }} / {{ tenant }}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "custom": { "drawStyle": "line", "fillOpacity": 10 }
+        }
+      }
+    },
+    {
+      "title": "GPU Seconds per Request (p95)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, rate(gpucast_gpu_seconds_per_request_bucket[5m]))",
+          "legendFormat": "{{ model }} p95"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": { "drawStyle": "line", "fillOpacity": 10 }
+        }
+      }
+    },
+    {
+      "title": "Tokens per GPU Dollar",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "expr": "gpucast_tokens_per_gpu_dollar",
+          "legendFormat": "{{ model }}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "steps": [
+              { "color": "red", "value": 0 },
+              { "color": "yellow", "value": 10000 },
+              { "color": "green", "value": 50000 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "title": "Tenant Spend (USD cumulative)",
+      "type": "bargauge",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 8 },
+      "targets": [
+        {
+          "expr": "gpucast_tenant_budget_used_usd",
+          "legendFormat": "{{ tenant }}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "currencyUSD" }
+      }
+    },
+    {
+      "title": "Wasted GPU Seconds (by reason)",
+      "type": "piechart",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 8 },
+      "targets": [
+        {
+          "expr": "sum by(reason) (gpucast_wasted_gpu_seconds_total)",
+          "legendFormat": "{{ reason }}"
+        }
+      ]
+    },
+    {
+      "title": "GPU Utilization (%)",
+      "type": "gauge",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 8 },
+      "targets": [
+        {
+          "expr": "avg(gpucast_gpu_utilization_percent)",
+          "legendFormat": "avg utilization"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "steps": [
+              { "color": "red", "value": 0 },
+              { "color": "yellow", "value": 40 },
+              { "color": "green", "value": 70 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "title": "Requests per Model",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+      "targets": [
+        {
+          "expr": "rate(gpucast_inference_requests_total[5m])",
+          "legendFormat": "{{ model }} ({{ status }})"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": { "drawStyle": "bars", "fillOpacity": 50 }
+        }
+      }
+    },
+    {
+      "title": "Time to First Token (p50 / p95 / p99)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.5, rate(gpucast_time_to_first_token_seconds_bucket[5m]))",
+          "legendFormat": "p50"
+        },
+        {
+          "expr": "histogram_quantile(0.95, rate(gpucast_time_to_first_token_seconds_bucket[5m]))",
+          "legendFormat": "p95"
+        },
+        {
+          "expr": "histogram_quantile(0.99, rate(gpucast_time_to_first_token_seconds_bucket[5m]))",
+          "legendFormat": "p99"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": { "drawStyle": "line", "fillOpacity": 10 }
+        }
+      }
+    },
+    {
+      "title": "Tokens Processed (prompt vs completion)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 20 },
+      "targets": [
+        {
+          "expr": "rate(gpucast_tokens_processed_total{direction=\"prompt\"}[5m])",
+          "legendFormat": "prompt {{ model }}"
+        },
+        {
+          "expr": "rate(gpucast_tokens_processed_total{direction=\"completion\"}[5m])",
+          "legendFormat": "completion {{ model }}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "drawStyle": "line", "fillOpacity": 20 }
+        }
+      }
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": ["gpucast", "inference", "gpu", "cost", "ai"],
+  "templating": {
+    "list": [
+      {
+        "name": "model",
+        "type": "query",
+        "query": "label_values(gpucast_inference_requests_total, model)",
+        "multi": true,
+        "includeAll": true
+      },
+      {
+        "name": "tenant",
+        "type": "query",
+        "query": "label_values(gpucast_inference_requests_total, tenant)",
+        "multi": true,
+        "includeAll": true
+      }
+    ]
+  },
+  "time": { "from": "now-1h", "to": "now" },
+  "title": "gpucast — Inference Cost & Performance",
+  "uid": "gpucast-inference-costs"
+}

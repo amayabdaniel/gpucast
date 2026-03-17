@@ -1,0 +1,12 @@
+{{- if .Values.grafanaDashboard.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gpucast-grafana-dashboard
+  labels:
+    app.kubernetes.io/name: gpucast
+    grafana_dashboard: "1"
+data:
+  gpucast-inference-costs.json: |-
+    {{- .Files.Get "dashboards/inference-costs.json" | nindent 4 }}
+{{- end }}

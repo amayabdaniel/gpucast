@@ -1,0 +1,27 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/amayabdaniel/gpucast
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  port: 9400
+
+resources:
+  limits:
+    cpu: 200m
+    memory: 128Mi
+  requests:
+    cpu: 50m
+    memory: 64Mi
+
+serviceMonitor:
+  enabled: true
+  interval: 15s
+
+grafanaDashboard:
+  enabled: true
+
+gpu:
+  hourlyRate: 0.80

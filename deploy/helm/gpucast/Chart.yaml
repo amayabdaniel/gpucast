@@ -1,0 +1,21 @@
+apiVersion: v2
+name: gpucast
+description: Kubernetes-native inference cost tracking — cost per request, per model, per tenant
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - gpu
+  - inference
+  - cost
+  - finops
+  - prometheus
+  - grafana
+  - kubernetes
+  - ai
+home: https://github.com/amayabdaniel/gpucast
+sources:
+  - https://github.com/amayabdaniel/gpucast
+maintainers:
+  - name: Daniel Amaya
+    url: https://github.com/amayabdaniel
