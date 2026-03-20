@@ -1,0 +1,78 @@
+{{- if .Values.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: gpucast-alerts
+  labels:
+    app.kubernetes.io/name: gpucast
+spec:
+  groups:
+    - name: gpucast.inference.cost
+      rules:
+        - alert: InferenceCostSpike
+          expr: gpucast_inference_cost_usd > 0.10
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High inference cost detected"
+            description: "Model {{ "{{" }} $labels.model {{ "}}" }} costs ${{ "{{" }} $value {{ "}}" }}/request for tenant {{ "{{" }} $labels.tenant {{ "}}" }}."
+
+        - alert: TenantBudgetExceeded
+          expr: gpucast_tenant_budget_used_usd > 2500
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Tenant budget threshold exceeded"
+            description: "Tenant {{ "{{" }} $labels.tenant {{ "}}" }} has spent ${{ "{{" }} $value {{ "}}" }} this period."
+
+    - name: gpucast.inference.latency
+      rules:
+        - alert: HighTimeToFirstToken
+          expr: histogram_quantile(0.95, rate(gpucast_time_to_first_token_seconds_bucket[5m])) > 2.0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "TTFT p95 exceeds 2 seconds"
+            description: "Model {{ "{{" }} $labels.model {{ "}}" }} TTFT p95 is {{ "{{" }} $value {{ "}}" }}s."
+
+        - alert: SlowInferenceRequests
+          expr: histogram_quantile(0.95, rate(gpucast_gpu_seconds_per_request_bucket[5m])) > 5.0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "GPU seconds per request p95 exceeds 5s"
+            description: "Model {{ "{{" }} $labels.model {{ "}}" }} using {{ "{{" }} $value {{ "}}" }}s GPU time per request."
+
+    - name: gpucast.gpu.efficiency
+      rules:
+        - alert: GPUUnderutilized
+          expr: gpucast_gpu_utilization_percent < 20
+          for: 15m
+          labels:
+            severity: info
+          annotations:
+            summary: "GPU utilization below 20%"
+            description: "GPU {{ "{{" }} $labels.gpu_id {{ "}}" }} running model {{ "{{" }} $labels.model {{ "}}" }} at {{ "{{" }} $value {{ "}}" }}% utilization. Consider consolidating workloads."
+
+        - alert: GPUWasteHigh
+          expr: rate(gpucast_wasted_gpu_seconds_total[15m]) > 100
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High GPU waste detected"
+            description: "{{ "{{" }} $value {{ "}}" }} GPU-seconds/min wasted due to {{ "{{" }} $labels.reason {{ "}}" }}."
+
+        - alert: LowTokenEfficiency
+          expr: gpucast_tokens_per_gpu_dollar < 5000
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Low token efficiency"
+            description: "Model {{ "{{" }} $labels.model {{ "}}" }} producing only {{ "{{" }} $value {{ "}}" }} tokens per GPU dollar. Consider quantization or a smaller model."
+{{- end }}
