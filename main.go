@@ -55,9 +55,17 @@ func main() {
 	log.Fatal(http.ListenAndServe(*addr, nil))
 }
 
+type collectorState struct {
+	prevRequests       float64
+	prevPromptTokens   float64
+	prevGenTokens      float64
+}
+
 func runCollectorLoop(c *collector.VLLMCollector, modelName string, interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
+
+	var prev collectorState
 
 	for range ticker.C {
 		m, err := c.Scrape()
@@ -66,12 +74,34 @@ func runCollectorLoop(c *collector.VLLMCollector, modelName string, interval tim
 			continue
 		}
 
-		// Update Prometheus metrics from scrape results
+		// Compute deltas to avoid double-counting on cumulative counters
+		deltaRequests := m.RequestsTotal - prev.prevRequests
+		deltaPromptTokens := m.PromptTokensTotal - prev.prevPromptTokens
+		deltaGenTokens := m.GenerationTokensTotal - prev.prevGenTokens
+
+		// Guard against counter resets (vLLM restart)
+		if deltaRequests < 0 { deltaRequests = m.RequestsTotal }
+		if deltaPromptTokens < 0 { deltaPromptTokens = m.PromptTokensTotal }
+		if deltaGenTokens < 0 { deltaGenTokens = m.GenerationTokensTotal }
+
+		prev.prevRequests = m.RequestsTotal
+		prev.prevPromptTokens = m.PromptTokensTotal
+		prev.prevGenTokens = m.GenerationTokensTotal
+
+		// Gauges — set directly
 		metrics.InferenceCostUSD.WithLabelValues(modelName, "all", "default").Set(m.EstimatedCostUSD)
-		metrics.InferenceRequestsTotal.WithLabelValues(modelName, "all", "ok").Add(m.RequestsTotal)
-		metrics.TokensProcessedTotal.WithLabelValues(modelName, "all", "prompt").Add(m.PromptTokensTotal)
-		metrics.TokensProcessedTotal.WithLabelValues(modelName, "all", "completion").Add(m.GenerationTokensTotal)
 		metrics.GPUUtilizationPercent.WithLabelValues("0", modelName).Set(m.GPUCacheUsagePercent)
+
+		// Counters — add deltas only
+		if deltaRequests > 0 {
+			metrics.InferenceRequestsTotal.WithLabelValues(modelName, "all", "ok").Add(deltaRequests)
+		}
+		if deltaPromptTokens > 0 {
+			metrics.TokensProcessedTotal.WithLabelValues(modelName, "all", "prompt").Add(deltaPromptTokens)
+		}
+		if deltaGenTokens > 0 {
+			metrics.TokensProcessedTotal.WithLabelValues(modelName, "all", "completion").Add(deltaGenTokens)
+		}
 
 		if m.EstimatedCostUSD > 0 {
 			totalTokens := m.PromptTokensTotal + m.GenerationTokensTotal
