@@ -3,6 +3,7 @@ package collector
 import (
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -144,14 +145,43 @@ func matchQuantile(line, name, quantile string) bool {
 	return strings.Contains(line, name) && strings.Contains(line, `quantile="`+quantile+`"`)
 }
 
+// parseValue extracts the numeric value from one Prometheus exposition
+// line. The exposition format is:
+//
+//	metric_name{labels} value [optional_timestamp_ms]
+//
+// Two subtleties the old take-last-field impl got wrong:
+//
+//   - Optional trailing timestamp. Some exporters (including vLLM
+//     under certain settings) append the sample time as a third
+//     field. Taking parts[len-1] silently returned that timestamp as
+//     "the value" — cost metrics jumped to ~1.7e12 for anyone whose
+//     vLLM had timestamps enabled. Walk left-to-right and return the
+//     first token that parses as a *finite* float; metric name +
+//     labels never parse as a float, so this is unambiguous.
+//
+//   - Non-finite values. strconv.ParseFloat accepts NaN, +Inf, -Inf
+//     without error — all three are spec-legal Prometheus values
+//     (uninitialized gauges, divide-by-zero counters). Any of them
+//     poisons every downstream `+=` accumulator in main.go's delta
+//     tracker AND makes encoding/json refuse to marshal the metrics
+//     response. Treat them as value-missing and keep scanning.
+//
+// Same fix landed in gpudab-server's internal/source/gpucast.go
+// (parsePrometheusValue) and previously in pkg/native/parser_pure.go
+// (now deleted). This is the third repo where the same collector
+// pattern needed the same fix.
 func parseValue(line string) float64 {
 	parts := strings.Fields(line)
 	if len(parts) < 2 {
 		return 0
 	}
-	v, err := strconv.ParseFloat(parts[len(parts)-1], 64)
-	if err != nil {
-		return 0
+	for _, tok := range parts[1:] {
+		v, err := strconv.ParseFloat(tok, 64)
+		if err != nil || math.IsNaN(v) || math.IsInf(v, 0) {
+			continue
+		}
+		return v
 	}
-	return v
+	return 0
 }

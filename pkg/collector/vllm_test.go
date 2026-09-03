@@ -167,3 +167,72 @@ vllm:num_requests_total 42
 		t.Errorf("expected 42 requests, got %f", m.RequestsTotal)
 	}
 }
+
+// TestParseValue_IgnoresOptionalTimestamp locks in the take-last-field
+// fix. Prometheus exposition allows a trailing Unix-ms timestamp; the
+// previous impl returned it as the value whenever vLLM emitted one,
+// making cost metrics jump to ~1.7e12.
+func TestParseValue_IgnoresOptionalTimestamp(t *testing.T) {
+	cases := map[string]float64{
+		"vllm:num_requests_running 3":                          3,
+		"vllm:num_requests_running 3 1700000000000":            3,
+		`vllm:gpu_cache_usage_perc{model="m"} 0.62`:            0.62,
+		`vllm:gpu_cache_usage_perc{model="m"} 0.62 1700000000`: 0.62,
+		"garbage":                                               0,
+		"# HELP not a value":                                    0,
+	}
+	for line, want := range cases {
+		if got := parseValue(line); got != want {
+			t.Errorf("parseValue(%q) = %v, want %v", line, got, want)
+		}
+	}
+}
+
+// TestParseValue_RejectsNonFinite locks in the NaN/±Inf fix. vLLM can
+// emit non-finite values on uninitialized gauges and divide-by-zero
+// counters; ParseFloat accepts all three silently. Any one of them
+// would poison main.go's delta-tracking `+=` accumulator (NaN is
+// contagious under addition) and make encoding/json refuse to marshal
+// the metrics response.
+func TestParseValue_RejectsNonFinite(t *testing.T) {
+	// Note: a non-finite value followed by a finite timestamp
+	// ("metric NaN 1700000000") is inherently ambiguous under the
+	// left-to-right scanner. Exporters emitting NaN generally don't
+	// include timestamps; we accept the tradeoff.
+	for _, line := range []string{
+		"vllm:num_requests_running NaN",
+		"vllm:num_requests_running +Inf",
+		"vllm:num_requests_running -Inf",
+		`vllm:gpu_cache_usage_perc{model="m"} NaN`,
+		"vllm:num_preemptions_total Inf",
+	} {
+		got := parseValue(line)
+		if got != 0 {
+			t.Errorf("parseValue(%q) = %v; want 0 (non-finite must not propagate)", line, got)
+		}
+		if math.IsNaN(got) || math.IsInf(got, 0) {
+			t.Errorf("parseValue(%q) returned non-finite %v — the whole point of the guard", line, got)
+		}
+	}
+}
+
+// TestParseValue_AccumulatorSurvivesNaNLine mirrors the invariant
+// downstream code depends on: summing values across a mix of good and
+// non-finite lines produces a finite total. Before the fix a single
+// NaN in a scrape poisoned the running total forever.
+func TestParseValue_AccumulatorSurvivesNaNLine(t *testing.T) {
+	var total float64
+	for _, line := range []string{
+		"vllm:num_requests_running 10",
+		"vllm:num_requests_running NaN",
+		"vllm:num_requests_running 20",
+	} {
+		total += parseValue(line)
+	}
+	if total != 30 {
+		t.Errorf("accumulator should sum to 30 across finite lines; got %v", total)
+	}
+	if math.IsNaN(total) || math.IsInf(total, 0) {
+		t.Fatalf("total became non-finite (%v) — NaN escaped the parser", total)
+	}
+}
