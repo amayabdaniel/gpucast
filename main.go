@@ -55,17 +55,16 @@ func main() {
 	log.Fatal(http.ListenAndServe(*addr, nil))
 }
 
-type collectorState struct {
-	prevRequests       float64
-	prevPromptTokens   float64
-	prevGenTokens      float64
-}
-
 func runCollectorLoop(c *collector.VLLMCollector, modelName string, interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
-	var prev collectorState
+	// prev holds the previous scrape's raw VLLMMetrics. Delta arithmetic
+	// lives in collector.ComputeDelta — extracted from this loop so it
+	// can be exercised under go test rather than only via a live vLLM.
+	// The zero-value first-scrape produces Delta == current, matching
+	// the prior inline behavior.
+	var prev collector.VLLMMetrics
 
 	for range ticker.C {
 		m, err := c.Scrape()
@@ -74,33 +73,27 @@ func runCollectorLoop(c *collector.VLLMCollector, modelName string, interval tim
 			continue
 		}
 
-		// Compute deltas to avoid double-counting on cumulative counters
-		deltaRequests := m.RequestsTotal - prev.prevRequests
-		deltaPromptTokens := m.PromptTokensTotal - prev.prevPromptTokens
-		deltaGenTokens := m.GenerationTokensTotal - prev.prevGenTokens
+		d := collector.ComputeDelta(prev, *m)
+		prev = *m
 
-		// Guard against counter resets (vLLM restart)
-		if deltaRequests < 0 { deltaRequests = m.RequestsTotal }
-		if deltaPromptTokens < 0 { deltaPromptTokens = m.PromptTokensTotal }
-		if deltaGenTokens < 0 { deltaGenTokens = m.GenerationTokensTotal }
-
-		prev.prevRequests = m.RequestsTotal
-		prev.prevPromptTokens = m.PromptTokensTotal
-		prev.prevGenTokens = m.GenerationTokensTotal
-
-		// Gauges — set directly
+		// Gauges — set directly. InferenceCostUSD is per-scrape lifetime
+		// and fragile across restarts by design; alerting/budgeting
+		// callers should read inference_cost_usd_total below instead.
 		metrics.InferenceCostUSD.WithLabelValues(modelName, "all", "default").Set(m.EstimatedCostUSD)
 		metrics.GPUUtilizationPercent.WithLabelValues("0", modelName).Set(m.GPUCacheUsagePercent)
 
 		// Counters — add deltas only
-		if deltaRequests > 0 {
-			metrics.InferenceRequestsTotal.WithLabelValues(modelName, "all", "ok").Add(deltaRequests)
+		if d.Requests > 0 {
+			metrics.InferenceRequestsTotal.WithLabelValues(modelName, "all", "ok").Add(d.Requests)
 		}
-		if deltaPromptTokens > 0 {
-			metrics.TokensProcessedTotal.WithLabelValues(modelName, "all", "prompt").Add(deltaPromptTokens)
+		if d.PromptTokens > 0 {
+			metrics.TokensProcessedTotal.WithLabelValues(modelName, "all", "prompt").Add(d.PromptTokens)
 		}
-		if deltaGenTokens > 0 {
-			metrics.TokensProcessedTotal.WithLabelValues(modelName, "all", "completion").Add(deltaGenTokens)
+		if d.GenerationTokens > 0 {
+			metrics.TokensProcessedTotal.WithLabelValues(modelName, "all", "completion").Add(d.GenerationTokens)
+		}
+		if d.CostUSD > 0 {
+			metrics.InferenceCostUSDTotal.WithLabelValues(modelName, "all", "default").Add(d.CostUSD)
 		}
 
 		if m.EstimatedCostUSD > 0 {

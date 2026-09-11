@@ -9,10 +9,27 @@ import "github.com/prometheus/client_golang/prometheus"
 var (
 	// InferenceCostUSD tracks the estimated cost in USD per inference request,
 	// attributed to model and tenant.
+	//
+	// Gauge semantics: reports the current-scrape lifetime cost, so
+	// alerting on this metric alone is fragile — vLLM's counters reset
+	// on process restart, and this gauge collapses to the since-restart
+	// value. Prefer alerting on inference_cost_usd_total (below), which
+	// is delta-accumulated and survives restarts. This gauge is kept
+	// for backwards compatibility with dashboards that plot it directly.
 	InferenceCostUSD = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: "gpucast",
 		Name:      "inference_cost_usd",
-		Help:      "Estimated cost in USD per inference request, by model and tenant.",
+		Help:      "Current-scrape estimated cost in USD, by model and tenant. Fragile across vLLM restarts — see inference_cost_usd_total.",
+	}, []string{"model", "tenant", "namespace"})
+
+	// InferenceCostUSDTotal accumulates cost across scrapes using per-
+	// scrape deltas, so counter resets on vLLM restart do not silently
+	// erase prior spend the way the Gauge does. This is the metric to
+	// alert on, put into budget calculations, or rate() in Grafana.
+	InferenceCostUSDTotal = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "gpucast",
+		Name:      "inference_cost_usd_total",
+		Help:      "Cumulative inference cost in USD across all scrapes, delta-accumulated so it survives vLLM restarts.",
 	}, []string{"model", "tenant", "namespace"})
 
 	// GPUSecondsPerRequest tracks GPU-seconds consumed per request at various percentiles.
@@ -78,6 +95,7 @@ var (
 func RegisterAll(reg prometheus.Registerer) {
 	reg.MustRegister(
 		InferenceCostUSD,
+		InferenceCostUSDTotal,
 		GPUSecondsPerRequest,
 		TokensPerGPUDollar,
 		WastedGPUSeconds,
