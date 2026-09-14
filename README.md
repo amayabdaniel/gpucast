@@ -2,7 +2,9 @@
 
 Kubernetes-native inference cost tracking.
 
-Cost per request. Per model. Per tenant. For self-hosted GPU inference.
+Cost per request. Per model. For self-hosted GPU inference.
+
+Per-tenant attribution is not sourced from vLLM (its `/metrics` is process-level and carries no tenant identity); it belongs at the audit-consumer layer — e.g., gpudab reading the modelgate audit stream, where every request has a tenant field.
 
 ## The problem
 
@@ -40,19 +42,17 @@ helm install gpucast deploy/helm/gpucast/ -n monitoring --create-namespace
 | `gpucast_inference_requests_total` | Counter | Request count by model, tenant, status |
 | `gpucast_tokens_processed_total` | Counter | Tokens by model, tenant, direction (prompt/completion) |
 | `gpucast_time_to_first_token_seconds` | Histogram | TTFT latency (p50/p95/p99) |
-| `gpucast_tenant_budget_used_usd` | Gauge | Cumulative spend per tenant |
 | `gpucast_gpu_utilization_percent` | Gauge | GPU compute utilization |
 
 ## Grafana dashboard
 
-Ships with a 9-panel dashboard:
+Ships with an 8-panel dashboard:
 
 | Panel | Visualization |
 |---|---|
 | Inference Cost per Model | Time series (USD/request) |
 | GPU Seconds per Request (p95) | Time series |
 | Tokens per GPU Dollar | Stat with thresholds (red/yellow/green) |
-| Tenant Spend (cumulative) | Bar gauge |
 | Wasted GPU Seconds | Pie chart by reason |
 | GPU Utilization | Gauge (0-100%) |
 | Requests per Model | Bar chart (req/s) |
@@ -68,7 +68,6 @@ Ships with PrometheusRule alerts:
 | Alert | Condition | Severity |
 |---|---|---|
 | InferenceCostSpike | Cost > $0.10/request for 5m | Warning |
-| TenantBudgetExceeded | Spend > $2500 | Critical |
 | HighTimeToFirstToken | TTFT p95 > 2s for 5m | Warning |
 | SlowInferenceRequests | GPU sec/request p95 > 5s for 5m | Warning |
 | GPUUnderutilized | GPU util < 20% for 15m | Info |

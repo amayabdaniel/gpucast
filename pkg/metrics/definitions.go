@@ -76,12 +76,14 @@ var (
 		Buckets:   []float64{0.05, 0.1, 0.2, 0.5, 1.0, 2.0, 5.0},
 	}, []string{"model"})
 
-	// TenantBudgetUsedUSD tracks cumulative spend per tenant.
-	TenantBudgetUsedUSD = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Namespace: "gpucast",
-		Name:      "tenant_budget_used_usd",
-		Help:      "Cumulative GPU inference spend per tenant in USD.",
-	}, []string{"tenant", "namespace"})
+	// Per-tenant cost lived here as `tenant_budget_used_usd` and was
+	// never populated — vLLM /metrics is process-level and carries no
+	// tenant identity, so gpucast standalone has nothing to attribute
+	// spend by. Tenant is only knowable from modelgate's audit stream
+	// (proxy.AuditEvent.Tenant), which means per-tenant cost belongs at
+	// the audit-consumer layer (gpudab), not here. Removed rather than
+	// left permanently zero — a dashboard panel reading a zero series
+	// reads as "no spend" instead of "not measured."
 
 	// GPUUtilizationPercent tracks current GPU utilization.
 	GPUUtilizationPercent = prometheus.NewGaugeVec(prometheus.GaugeOpts{
@@ -102,7 +104,6 @@ func RegisterAll(reg prometheus.Registerer) {
 		InferenceRequestsTotal,
 		TokensProcessedTotal,
 		TimeToFirstTokenSeconds,
-		TenantBudgetUsedUSD,
 		GPUUtilizationPercent,
 	)
 }

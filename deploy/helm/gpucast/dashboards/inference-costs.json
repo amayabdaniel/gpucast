@@ -64,20 +64,6 @@
       }
     },
     {
-      "title": "Tenant Spend (USD cumulative)",
-      "type": "bargauge",
-      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 8 },
-      "targets": [
-        {
-          "expr": "gpucast_tenant_budget_used_usd",
-          "legendFormat": "{{ tenant }}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": { "unit": "currencyUSD" }
-      }
-    },
-    {
       "title": "Wasted GPU Seconds (by reason)",
       "type": "piechart",
       "gridPos": { "h": 4, "w": 6, "x": 12, "y": 8 },

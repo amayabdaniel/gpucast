@@ -18,15 +18,6 @@ spec:
             summary: "High inference cost detected"
             description: "Model {{ "{{" }} $labels.model {{ "}}" }} costs ${{ "{{" }} $value {{ "}}" }}/request for tenant {{ "{{" }} $labels.tenant {{ "}}" }}."
 
-        - alert: TenantBudgetExceeded
-          expr: gpucast_tenant_budget_used_usd > 2500
-          for: 1m
-          labels:
-            severity: critical
-          annotations:
-            summary: "Tenant budget threshold exceeded"
-            description: "Tenant {{ "{{" }} $labels.tenant {{ "}}" }} has spent ${{ "{{" }} $value {{ "}}" }} this period."
-
     - name: gpucast.inference.latency
       rules:
         - alert: HighTimeToFirstToken
