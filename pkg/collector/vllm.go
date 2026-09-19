@@ -72,7 +72,17 @@ func (c *VLLMCollector) Scrape() (*VLLMMetrics, error) {
 		return nil, fmt.Errorf("vLLM metrics returned status %d", resp.StatusCode)
 	}
 
-	body, err := io.ReadAll(resp.Body)
+	// Cap the scrape read so a hostile or misbehaving vLLM endpoint
+	// can't OOM this pod by streaming an unbounded /metrics response.
+	// A real vLLM /metrics body is tens of KB even for a busy server
+	// (~200 metric names × a few series each); 8MiB is two orders of
+	// magnitude above that ceiling and still bounded. LimitReader
+	// truncates silently, but the parser downstream tolerates
+	// truncation (each line is parsed independently and unknown lines
+	// are ignored), so a truncated scrape degrades to "partial
+	// metrics this tick" rather than "crash the exporter".
+	const maxScrapeBytes = 8 << 20
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxScrapeBytes))
 	if err != nil {
 		return nil, fmt.Errorf("reading vLLM metrics: %w", err)
 	}

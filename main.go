@@ -41,18 +41,36 @@ func main() {
 		log.Println("gpucast: use --vllm-endpoint=http://vllm-svc:8000/metrics to enable collection")
 	}
 
-	http.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
-	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+	mux := http.NewServeMux()
+	mux.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprintln(w, "ok")
 	})
-	http.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprintln(w, "ok")
 	})
 
+	// Explicit *http.Server so we get ReadHeaderTimeout — the default
+	// http.ListenAndServe uses a zero-valued Server which never times
+	// out header reads, letting a slowloris-style attacker tie up
+	// every listener slot by trickling bytes forever. WriteTimeout
+	// covers the response side; IdleTimeout bounds keep-alive
+	// sessions. Values are generous enough for a scraper that pulls
+	// large exposition texts under load, tight enough to reject
+	// pathological clients.
+	srv := &http.Server{
+		Addr:              *addr,
+		Handler:           mux,
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       60 * time.Second,
+	}
+
 	log.Printf("gpucast: serving metrics on %s/metrics", *addr)
-	log.Fatal(http.ListenAndServe(*addr, nil))
+	log.Fatal(srv.ListenAndServe())
 }
 
 func runCollectorLoop(c *collector.VLLMCollector, modelName string, interval time.Duration) {

@@ -2,7 +2,13 @@ replicaCount: 1
 
 image:
   repository: ghcr.io/amayabdaniel/gpucast
-  tag: latest
+  # tag must be pinned explicitly at install time (helm install/upgrade
+  # ... --set image.tag=v0.1.0). The default is empty rather than
+  # "latest" so the required helper in templates/deployment.yaml fails
+  # loud on a missing pin — a rolling "latest" tag lets a container
+  # host silently ship a different binary on the next pod restart,
+  # defeats image-signing and defeats reproducible incident forensics.
+  tag: ""
   pullPolicy: IfNotPresent
 
 service:

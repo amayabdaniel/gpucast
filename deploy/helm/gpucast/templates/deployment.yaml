@@ -23,7 +23,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: gpucast
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          image: "{{ .Values.image.repository }}:{{ required "image.tag is required — do not use :latest, pin an explicit tag (e.g. --set image.tag=v0.1.0)" .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
             - --listen=:{{ .Values.service.port }}
