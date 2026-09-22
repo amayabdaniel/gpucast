@@ -8,10 +8,10 @@ import (
 
 // CostForecaster tracks spending velocity and predicts end-of-period costs.
 type CostForecaster struct {
-	mu       sync.RWMutex
-	samples  []costSample
-	maxAge   time.Duration
-	window   int
+	mu      sync.RWMutex
+	samples []costSample
+	maxAge  time.Duration
+	window  int
 }
 
 type costSample struct {

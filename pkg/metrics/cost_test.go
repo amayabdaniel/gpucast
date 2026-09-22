@@ -66,8 +66,8 @@ func TestCostCalculator_LongRequest(t *testing.T) {
 func TestCostCalculator_TokenEfficiency(t *testing.T) {
 	calc := &CostCalculator{GPUHourlyRate: 3.60}
 
-	fast := calc.Calculate(0.5, 500, 200)  // fast request
-	slow := calc.Calculate(5.0, 500, 200)  // same tokens, 10x GPU time
+	fast := calc.Calculate(0.5, 500, 200) // fast request
+	slow := calc.Calculate(5.0, 500, 200) // same tokens, 10x GPU time
 
 	if fast.TokensPerDollar <= slow.TokensPerDollar {
 		t.Errorf("faster request should have higher tokens/dollar: fast=%.0f, slow=%.0f",

@@ -22,18 +22,18 @@ type OllamaMetrics struct {
 	RunningModels []OllamaRunningModel
 
 	// Aggregate stats
-	TotalModelsLoaded int
+	TotalModelsLoaded  int
 	TotalVRAMUsedBytes int64
 	TotalSizeBytes     int64
 }
 
 // OllamaRunningModel represents a model currently loaded in Ollama.
 type OllamaRunningModel struct {
-	Name       string
-	SizeBytes  int64
-	VRAMBytes  int64
-	ExpiresAt  time.Time
-	SizeVRAM   int64
+	Name      string
+	SizeBytes int64
+	VRAMBytes int64
+	ExpiresAt time.Time
+	SizeVRAM  int64
 }
 
 // ollamaProcessResponse is the JSON shape returned by GET /api/ps

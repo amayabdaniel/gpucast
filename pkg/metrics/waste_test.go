@@ -102,12 +102,12 @@ func TestAnalyzeWaste_ColdStart(t *testing.T) {
 
 func TestAnalyzeWaste_Fragmentation(t *testing.T) {
 	input := WasteInput{
-		GPUUtilPercent:  70,
-		GPUVRAMUsedGB:   20,
-		GPUVRAMTotalGB:  24,
-		RequestsPerMin:  40,
-		NumPreemptions:  50,
-		GPUHourlyRate:   0.80,
+		GPUUtilPercent: 70,
+		GPUVRAMUsedGB:  20,
+		GPUVRAMTotalGB: 24,
+		RequestsPerMin: 40,
+		NumPreemptions: 50,
+		GPUHourlyRate:  0.80,
 	}
 
 	result := AnalyzeWaste(input)
@@ -124,15 +124,15 @@ func TestAnalyzeWaste_Fragmentation(t *testing.T) {
 
 func TestAnalyzeWaste_HealthyGPU(t *testing.T) {
 	input := WasteInput{
-		GPUUtilPercent:  75,
-		GPUVRAMUsedGB:   18,
-		GPUVRAMTotalGB:  24,
-		RequestsPerMin:  100,
-		AvgBatchSize:    8,
-		MaxBatchSize:    16,
+		GPUUtilPercent:   75,
+		GPUVRAMUsedGB:    18,
+		GPUVRAMTotalGB:   24,
+		RequestsPerMin:   100,
+		AvgBatchSize:     8,
+		MaxBatchSize:     16,
 		ModelLoadTimeSec: 15,
-		NumPreemptions:  2,
-		GPUHourlyRate:   0.80,
+		NumPreemptions:   2,
+		GPUHourlyRate:    0.80,
 	}
 
 	result := AnalyzeWaste(input)

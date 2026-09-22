@@ -132,7 +132,7 @@ func TestComputeDelta_PartialResetOneField(t *testing.T) {
 	current := VLLMMetrics{
 		RequestsTotal:         150,
 		PromptTokensTotal:     7250,
-		GenerationTokensTotal: 100,  // reset
+		GenerationTokensTotal: 100, // reset
 		EstimatedCostUSD:      0.234,
 	}
 	d := ComputeDelta(prev, current)

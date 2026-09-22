@@ -9,11 +9,11 @@ import (
 type WasteReason string
 
 const (
-	WasteIdle          WasteReason = "idle"           // model loaded, no requests
+	WasteIdle            WasteReason = "idle"            // model loaded, no requests
 	WasteOverprovisioned WasteReason = "overprovisioned" // GPU too big for model
-	WasteLowBatch      WasteReason = "low_batch"      // batch size 1 when capacity exists
-	WasteColdStart     WasteReason = "cold_start"     // GPU time spent loading model
-	WasteFragmentation WasteReason = "fragmentation"  // KV cache fragmented, wasted VRAM
+	WasteLowBatch        WasteReason = "low_batch"       // batch size 1 when capacity exists
+	WasteColdStart       WasteReason = "cold_start"      // GPU time spent loading model
+	WasteFragmentation   WasteReason = "fragmentation"   // KV cache fragmented, wasted VRAM
 )
 
 // WasteAnalysis is the result of analyzing GPU waste.
@@ -24,26 +24,26 @@ type WasteAnalysis struct {
 
 // WasteFinding is a single identified waste cause with actionable advice.
 type WasteFinding struct {
-	Reason      WasteReason
-	Severity    string  // "critical", "warning", "info"
+	Reason       WasteReason
+	Severity     string // "critical", "warning", "info"
 	WastePercent float64
-	Description string
-	Action      string
-	SavedUSD    float64 // estimated monthly savings if fixed
+	Description  string
+	Action       string
+	SavedUSD     float64 // estimated monthly savings if fixed
 }
 
 // WasteInput contains the data needed for waste analysis.
 type WasteInput struct {
-	GPUUtilPercent    float64
-	GPUVRAMUsedGB     float64
-	GPUVRAMTotalGB    float64
-	RequestsPerMin    float64
-	AvgBatchSize      float64
-	MaxBatchSize      float64
-	CacheHitRate      float64
-	ModelLoadTimeSec  float64
-	NumPreemptions    float64
-	GPUHourlyRate     float64
+	GPUUtilPercent   float64
+	GPUVRAMUsedGB    float64
+	GPUVRAMTotalGB   float64
+	RequestsPerMin   float64
+	AvgBatchSize     float64
+	MaxBatchSize     float64
+	CacheHitRate     float64
+	ModelLoadTimeSec float64
+	NumPreemptions   float64
+	GPUHourlyRate    float64
 }
 
 // AnalyzeWaste examines GPU metrics and identifies specific waste causes.

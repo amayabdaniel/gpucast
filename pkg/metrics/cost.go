@@ -9,12 +9,12 @@ type CostCalculator struct {
 
 // RequestCost represents the computed cost breakdown of a single inference request.
 type RequestCost struct {
-	GPUSeconds     float64
-	CostUSD        float64
-	PromptTokens   int
+	GPUSeconds       float64
+	CostUSD          float64
+	PromptTokens     int
 	CompletionTokens int
-	TotalTokens    int
-	TokensPerDollar float64
+	TotalTokens      int
+	TokensPerDollar  float64
 }
 
 // Calculate computes the cost of an inference request given GPU usage and token counts.

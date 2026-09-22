@@ -13,31 +13,31 @@ import (
 // VLLMCollector scrapes a vLLM Prometheus endpoint and extracts
 // inference-specific metrics for cost correlation.
 type VLLMCollector struct {
-	endpoint   string
-	client     *http.Client
-	gpuHourly  float64
-	modelName  string
+	endpoint  string
+	client    *http.Client
+	gpuHourly float64
+	modelName string
 }
 
 // VLLMMetrics holds parsed metrics from a single vLLM scrape.
 type VLLMMetrics struct {
 	// Request metrics
-	RequestsTotal     float64
-	RequestsRunning   float64
-	RequestsWaiting   float64
+	RequestsTotal   float64
+	RequestsRunning float64
+	RequestsWaiting float64
 
 	// Token metrics
 	PromptTokensTotal     float64
 	GenerationTokensTotal float64
 
 	// Latency metrics (seconds)
-	TTFT_P50  float64
-	TTFT_P95  float64
-	TTFT_P99  float64
-	TPOT_P50  float64 // time per output token
-	TPOT_P95  float64
-	E2E_P50   float64 // end to end latency
-	E2E_P95   float64
+	TTFT_P50 float64
+	TTFT_P95 float64
+	TTFT_P99 float64
+	TPOT_P50 float64 // time per output token
+	TPOT_P95 float64
+	E2E_P50  float64 // end to end latency
+	E2E_P95  float64
 
 	// GPU metrics
 	GPUCacheUsagePercent float64

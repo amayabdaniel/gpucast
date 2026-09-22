@@ -178,8 +178,8 @@ func TestParseValue_IgnoresOptionalTimestamp(t *testing.T) {
 		"vllm:num_requests_running 3 1700000000000":            3,
 		`vllm:gpu_cache_usage_perc{model="m"} 0.62`:            0.62,
 		`vllm:gpu_cache_usage_perc{model="m"} 0.62 1700000000`: 0.62,
-		"garbage":                                               0,
-		"# HELP not a value":                                    0,
+		"garbage":            0,
+		"# HELP not a value": 0,
 	}
 	for line, want := range cases {
 		if got := parseValue(line); got != want {
