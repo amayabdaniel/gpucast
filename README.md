@@ -41,7 +41,7 @@ helm install gpucast deploy/helm/gpucast/ -n monitoring --create-namespace
 | `gpucast_inference_requests_total` | Counter | Request count by model, tenant, status |
 | `gpucast_tokens_processed_total` | Counter | Tokens by model, tenant, direction (prompt/completion) |
 | `gpucast_time_to_first_token_seconds` | Histogram | TTFT latency (p50/p95/p99) |
-| `gpucast_gpu_utilization_percent` | Gauge | GPU compute utilization |
+| `gpucast_vllm_kv_cache_usage_percent` | Gauge | vLLM KV-cache occupancy (NOT GPU compute utilization — gpucast scrapes vLLM /metrics, not SM counters) |
 
 ## Grafana dashboard
 
@@ -52,7 +52,7 @@ Ships with a 7-panel dashboard:
 | Inference Cost per Model | Time series (USD/request) |
 | GPU Seconds per Request (p95) | Time series |
 | Tokens per GPU Dollar | Stat with thresholds (red/yellow/green) |
-| GPU Utilization | Gauge (0-100%) |
+| vLLM KV Cache Usage | Gauge (0-100%, high = memory pressure) |
 | Requests per Model | Bar chart (req/s) |
 | Time to First Token (p50/p95/p99) | Time series |
 | Tokens Processed (prompt vs completion) | Time series |
@@ -68,7 +68,6 @@ Ships with PrometheusRule alerts:
 | InferenceCostSpike | Cost > $0.10/request for 5m | Warning |
 | HighTimeToFirstToken | TTFT p95 > 2s for 5m | Warning |
 | SlowInferenceRequests | GPU sec/request p95 > 5s for 5m | Warning |
-| GPUUnderutilized | GPU util < 20% for 15m | Info |
 | LowTokenEfficiency | < 5000 tokens per GPU dollar for 10m | Warning |
 
 ## Security

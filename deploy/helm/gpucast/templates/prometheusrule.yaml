@@ -54,14 +54,21 @@ spec:
 
     - name: gpucast.gpu.efficiency
       rules:
-        - alert: GPUUnderutilized
-          expr: gpucast_gpu_utilization_percent < 20
-          for: 15m
-          labels:
-            severity: info
-          annotations:
-            summary: "GPU utilization below 20%"
-            description: "GPU {{ "{{" }} $labels.gpu_id {{ "}}" }} running model {{ "{{" }} $labels.model {{ "}}" }} at {{ "{{" }} $value {{ "}}" }}% utilization. Consider consolidating workloads."
+        # `GPUUnderutilized` lived here firing on
+        # `gpucast_gpu_utilization_percent < 20`. The metric name said
+        # GPU utilization; the value was vLLM's KV-cache occupancy (a
+        # low KV cache means efficient batching, not an idle GPU), so
+        # the alert was INVERTED — it fired on well-behaved workloads
+        # and told operators to consolidate exactly the models worth
+        # keeping. Removed with the metric rename rather than
+        # relabelled, because "KV cache below 20%" is not a useful
+        # alert condition in its own right (efficient use looks the
+        # same as idle load from the KV-cache side). Honest
+        # re-introduction path: add a KV-cache HIGH alert (near
+        # saturation signals preemptions / memory pressure) when
+        # someone sets a defensible threshold, OR wire a real GPU-
+        # utilization source (DCGM / nvidia-smi) and add a utilization
+        # alert back on that.
 
         - alert: LowTokenEfficiency
           expr: gpucast_tokens_per_gpu_dollar < 5000

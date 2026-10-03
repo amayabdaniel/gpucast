@@ -93,11 +93,26 @@ var (
 	// left permanently zero — a dashboard panel reading a zero series
 	// reads as "no spend" instead of "not measured."
 
-	// GPUUtilizationPercent tracks current GPU utilization.
-	GPUUtilizationPercent = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+	// VLLMKVCacheUsagePercent tracks vLLM's KV-cache occupancy ratio
+	// (how much of the per-model KV-cache memory is currently in use
+	// across active sequences). This is NOT GPU compute utilization —
+	// nvidia-smi utilization-% comes from the hardware's SM counters
+	// and gpucast does not scrape them. vLLM's /metrics only exposes
+	// the KV-cache number; mislabelling it as GPU utilization is the
+	// pattern that caused the inverted-waste-signal bug in gpudab's
+	// dashboard (low KV cache = efficient batching, was being read as
+	// "GPU idle, candidate for deprovisioning"). Named for exactly
+	// what it measures so downstream consumers can't accidentally
+	// make the opposite claim.
+	//
+	// gpu_id="0" + model is a shape kept for compat with the prior
+	// metric; vLLM's KV cache is per-model-instance and the gpu_id
+	// label is effectively deterministic until gpucast grows a
+	// per-GPU scraper.
+	VLLMKVCacheUsagePercent = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: "gpucast",
-		Name:      "gpu_utilization_percent",
-		Help:      "Current GPU compute utilization percentage.",
+		Name:      "vllm_kv_cache_usage_percent",
+		Help:      "vLLM KV-cache occupancy percentage (NOT GPU compute utilization — gpucast does not scrape SM counters).",
 	}, []string{"gpu_id", "model"})
 )
 
@@ -111,6 +126,6 @@ func RegisterAll(reg prometheus.Registerer) {
 		InferenceRequestsTotal,
 		TokensProcessedTotal,
 		TimeToFirstTokenSeconds,
-		GPUUtilizationPercent,
+		VLLMKVCacheUsagePercent,
 	)
 }

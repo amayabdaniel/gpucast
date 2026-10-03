@@ -98,7 +98,12 @@ func runCollectorLoop(c *collector.VLLMCollector, modelName string, interval tim
 		// and fragile across restarts by design; alerting/budgeting
 		// callers should read inference_cost_usd_total below instead.
 		metrics.InferenceCostUSD.WithLabelValues(modelName, "all", "default").Set(m.EstimatedCostUSD)
-		metrics.GPUUtilizationPercent.WithLabelValues("0", modelName).Set(m.GPUCacheUsagePercent)
+		// VLLMKVCacheUsagePercent is populated from vLLM's KV-cache
+		// occupancy (m.GPUCacheUsagePercent — the vLLM-side field name
+		// is historical, the value is KV-cache usage, not GPU compute).
+		// Named explicitly on the Prometheus side so downstream can't
+		// misread it as compute utilization — see the metric godoc.
+		metrics.VLLMKVCacheUsagePercent.WithLabelValues("0", modelName).Set(m.GPUCacheUsagePercent)
 
 		// Counters — add deltas only
 		if d.Requests > 0 {
