@@ -124,8 +124,18 @@ func runCollectorLoop(c *collector.VLLMCollector, modelName string, interval tim
 			metrics.TokensPerGPUDollar.WithLabelValues(modelName).Set(totalTokens / m.EstimatedCostUSD)
 		}
 
+		// Emit vLLM's own TTFT percentile aggregates as separate gauges
+		// — see the TTFT*Seconds metric godocs for why this isn't a
+		// histogram anymore. Only writing values vLLM reported (>0 as
+		// the "did we actually scrape this quantile" guard).
 		if m.TTFT_P50 > 0 {
-			metrics.TimeToFirstTokenSeconds.WithLabelValues(modelName).Observe(m.TTFT_P50)
+			metrics.TTFTP50Seconds.WithLabelValues(modelName).Set(m.TTFT_P50)
+		}
+		if m.TTFT_P95 > 0 {
+			metrics.TTFTP95Seconds.WithLabelValues(modelName).Set(m.TTFT_P95)
+		}
+		if m.TTFT_P99 > 0 {
+			metrics.TTFTP99Seconds.WithLabelValues(modelName).Set(m.TTFT_P99)
 		}
 
 		if m.EstimatedGPUSeconds > 0 && m.RequestsTotal > 0 {

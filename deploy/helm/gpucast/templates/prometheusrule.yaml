@@ -34,14 +34,25 @@ spec:
 
     - name: gpucast.inference.latency
       rules:
+        # TTFT p95 alert reads vLLM's reported p95 directly. A prior
+        # version computed histogram_quantile(0.95, ...) over a bucket
+        # populated with .Observe(m.TTFT_P50) once per scrape — a
+        # single pre-aggregated P50 scalar observed as if an individual
+        # sample, so the "p95" number was approximately the P50 and
+        # the alert fired on p50-of-TTFT crossing 2s rather than p95.
+        # Threshold stays at 2.0s: that's a p95 SLO ceiling for
+        # interactive inference (any single-digit-second TTFT is a
+        # tail-latency problem). Polarity is "high is bad" — opposite
+        # of the KV-cache panel fix from this morning. $value here is
+        # vLLM's own p95, not an approximation of it.
         - alert: HighTimeToFirstToken
-          expr: histogram_quantile(0.95, rate(gpucast_time_to_first_token_seconds_bucket[5m])) > 2.0
+          expr: gpucast_ttft_p95_seconds > 2.0
           for: 5m
           labels:
             severity: warning
           annotations:
             summary: "TTFT p95 exceeds 2 seconds"
-            description: "Model {{ "{{" }} $labels.model {{ "}}" }} TTFT p95 is {{ "{{" }} $value {{ "}}" }}s."
+            description: "Model {{ "{{" }} $labels.model {{ "}}" }} TTFT p95 is {{ "{{" }} $value {{ "}}" }}s (from vLLM's own aggregate, not a histogram quantile)."
 
         - alert: SlowInferenceRequests
           expr: histogram_quantile(0.95, rate(gpucast_gpu_seconds_per_request_bucket[5m])) > 5.0

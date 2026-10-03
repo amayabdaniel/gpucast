@@ -109,19 +109,20 @@
     },
     {
       "title": "Time to First Token (p50 / p95 / p99)",
+      "description": "Each series reads vLLM's own TTFT percentile aggregate directly. Prior version used histogram_quantile(X, rate(gpucast_time_to_first_token_seconds_bucket[5m])) with X = 0.5 / 0.95 / 0.99 — but the backing histogram was fed only vLLM's P50 scalar once per scrape, so all three series returned approximately the same value (~P50) while claiming three different percentiles. The three gauges below are what vLLM already measured, no histogram arithmetic in between.",
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
       "targets": [
         {
-          "expr": "histogram_quantile(0.5, rate(gpucast_time_to_first_token_seconds_bucket[5m]))",
+          "expr": "gpucast_ttft_p50_seconds",
           "legendFormat": "p50"
         },
         {
-          "expr": "histogram_quantile(0.95, rate(gpucast_time_to_first_token_seconds_bucket[5m]))",
+          "expr": "gpucast_ttft_p95_seconds",
           "legendFormat": "p95"
         },
         {
-          "expr": "histogram_quantile(0.99, rate(gpucast_time_to_first_token_seconds_bucket[5m]))",
+          "expr": "gpucast_ttft_p99_seconds",
           "legendFormat": "p99"
         }
       ],

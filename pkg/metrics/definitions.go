@@ -76,12 +76,33 @@ var (
 		Help:      "Total tokens processed (prompt + completion).",
 	}, []string{"model", "tenant", "direction"})
 
-	// TimeToFirstTokenSeconds tracks TTFT latency.
-	TimeToFirstTokenSeconds = prometheus.NewHistogramVec(prometheus.HistogramOpts{
+	// TTFT percentile gauges — one per vLLM-reported quantile. A prior
+	// version declared a `time_to_first_token_seconds` HistogramVec and
+	// called .Observe(m.TTFT_P50) ONCE per scrape, feeding a single
+	// pre-aggregated P50 scalar into the histogram as if it were an
+	// individual request sample. Taking histogram_quantile(0.95, ...)
+	// on a histogram populated with only P50 values returned
+	// approximately the P50, so the alert and the three dashboard
+	// panels (p50/p95/p99) all showed roughly the same number while
+	// claiming three different percentiles. gpucast scrapes vLLM
+	// /metrics which already carries all three percentiles — emit them
+	// as separate gauges so each panel reads what its label claims.
+	// Name each gauge for the percentile it carries, not for a
+	// distribution it doesn't have.
+	TTFTP50Seconds = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: "gpucast",
-		Name:      "time_to_first_token_seconds",
-		Help:      "Time to first token (TTFT) in seconds.",
-		Buckets:   []float64{0.05, 0.1, 0.2, 0.5, 1.0, 2.0, 5.0},
+		Name:      "ttft_p50_seconds",
+		Help:      "Time to first token, p50 (median), from vLLM's own aggregates.",
+	}, []string{"model"})
+	TTFTP95Seconds = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: "gpucast",
+		Name:      "ttft_p95_seconds",
+		Help:      "Time to first token, p95, from vLLM's own aggregates.",
+	}, []string{"model"})
+	TTFTP99Seconds = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: "gpucast",
+		Name:      "ttft_p99_seconds",
+		Help:      "Time to first token, p99, from vLLM's own aggregates.",
 	}, []string{"model"})
 
 	// Per-tenant cost lived here as `tenant_budget_used_usd` and was
@@ -125,7 +146,9 @@ func RegisterAll(reg prometheus.Registerer) {
 		TokensPerGPUDollar,
 		InferenceRequestsTotal,
 		TokensProcessedTotal,
-		TimeToFirstTokenSeconds,
+		TTFTP50Seconds,
+		TTFTP95Seconds,
+		TTFTP99Seconds,
 		VLLMKVCacheUsagePercent,
 	)
 }
