@@ -38,7 +38,6 @@ helm install gpucast deploy/helm/gpucast/ -n monitoring --create-namespace
 | `gpucast_inference_cost_usd` | Gauge | Estimated cost per request in USD, by model and tenant |
 | `gpucast_gpu_seconds_per_request` | Histogram | GPU-seconds consumed per request (p50/p95/p99) |
 | `gpucast_tokens_per_gpu_dollar` | Gauge | Token throughput efficiency — higher = cheaper |
-| `gpucast_wasted_gpu_seconds_total` | Counter | GPU time lost to idle, fragmentation, cold starts |
 | `gpucast_inference_requests_total` | Counter | Request count by model, tenant, status |
 | `gpucast_tokens_processed_total` | Counter | Tokens by model, tenant, direction (prompt/completion) |
 | `gpucast_time_to_first_token_seconds` | Histogram | TTFT latency (p50/p95/p99) |
@@ -46,14 +45,13 @@ helm install gpucast deploy/helm/gpucast/ -n monitoring --create-namespace
 
 ## Grafana dashboard
 
-Ships with an 8-panel dashboard:
+Ships with a 7-panel dashboard:
 
 | Panel | Visualization |
 |---|---|
 | Inference Cost per Model | Time series (USD/request) |
 | GPU Seconds per Request (p95) | Time series |
 | Tokens per GPU Dollar | Stat with thresholds (red/yellow/green) |
-| Wasted GPU Seconds | Pie chart by reason |
 | GPU Utilization | Gauge (0-100%) |
 | Requests per Model | Bar chart (req/s) |
 | Time to First Token (p50/p95/p99) | Time series |
@@ -71,7 +69,6 @@ Ships with PrometheusRule alerts:
 | HighTimeToFirstToken | TTFT p95 > 2s for 5m | Warning |
 | SlowInferenceRequests | GPU sec/request p95 > 5s for 5m | Warning |
 | GPUUnderutilized | GPU util < 20% for 15m | Info |
-| GPUWasteHigh | > 100 GPU-sec/min wasted for 10m | Warning |
 | LowTokenEfficiency | < 5000 tokens per GPU dollar for 10m | Warning |
 
 ## Security

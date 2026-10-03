@@ -49,15 +49,6 @@ spec:
             summary: "GPU utilization below 20%"
             description: "GPU {{ "{{" }} $labels.gpu_id {{ "}}" }} running model {{ "{{" }} $labels.model {{ "}}" }} at {{ "{{" }} $value {{ "}}" }}% utilization. Consider consolidating workloads."
 
-        - alert: GPUWasteHigh
-          expr: rate(gpucast_wasted_gpu_seconds_total[15m]) > 100
-          for: 10m
-          labels:
-            severity: warning
-          annotations:
-            summary: "High GPU waste detected"
-            description: "{{ "{{" }} $value {{ "}}" }} GPU-seconds/min wasted due to {{ "{{" }} $labels.reason {{ "}}" }}."
-
         - alert: LowTokenEfficiency
           expr: gpucast_tokens_per_gpu_dollar < 5000
           for: 10m

@@ -64,20 +64,9 @@
       }
     },
     {
-      "title": "Wasted GPU Seconds (by reason)",
-      "type": "piechart",
-      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 8 },
-      "targets": [
-        {
-          "expr": "sum by(reason) (gpucast_wasted_gpu_seconds_total)",
-          "legendFormat": "{{ reason }}"
-        }
-      ]
-    },
-    {
       "title": "GPU Utilization (%)",
       "type": "gauge",
-      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 8 },
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 8 },
       "targets": [
         {
           "expr": "avg(gpucast_gpu_utilization_percent)",

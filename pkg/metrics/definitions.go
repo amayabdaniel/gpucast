@@ -47,12 +47,20 @@ var (
 		Help:      "Tokens generated per dollar of GPU cost. Higher = more efficient.",
 	}, []string{"model"})
 
-	// WastedGPUSeconds tracks GPU time not used for inference.
-	WastedGPUSeconds = prometheus.NewCounterVec(prometheus.CounterOpts{
-		Namespace: "gpucast",
-		Name:      "wasted_gpu_seconds_total",
-		Help:      "GPU-seconds wasted due to idle, fragmentation, or cold starts.",
-	}, []string{"reason", "model"})
+	// `wasted_gpu_seconds_total` lived here as a CounterVec that was
+	// registered but never written: no .Add call in main.go, in the
+	// collector, or anywhere else in gpucast's tree. The alert
+	// `GPUWasteHigh` queried rate(wasted_gpu_seconds_total[15m]) > 100
+	// — rate(0) is 0, 0 > 100 is false under every condition, so the
+	// alert was mathematically incapable of firing. The dashboard
+	// panel `Wasted GPU Seconds (by reason)` was permanently empty,
+	// which reads as "no waste" rather than "not measured" (same
+	// signal-vs-silence shape operators have been bitten by in other
+	// repos this week). Deleted rather than left as scaffolding;
+	// wiring would need gpucast to actually detect idle / fragmentation
+	// / cold-start periods, which the current vLLM /metrics scrape has
+	// no signal for. Honest re-introduction path is to add it back the
+	// same commit that wires a real waste detector.
 
 	// InferenceRequestsTotal counts requests per model/tenant.
 	InferenceRequestsTotal = prometheus.NewCounterVec(prometheus.CounterOpts{
@@ -100,7 +108,6 @@ func RegisterAll(reg prometheus.Registerer) {
 		InferenceCostUSDTotal,
 		GPUSecondsPerRequest,
 		TokensPerGPUDollar,
-		WastedGPUSeconds,
 		InferenceRequestsTotal,
 		TokensProcessedTotal,
 		TimeToFirstTokenSeconds,
