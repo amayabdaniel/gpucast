@@ -7,13 +7,14 @@
   "links": [],
   "panels": [
     {
-      "title": "Inference Cost per Model (USD/request)",
+      "title": "Inference Cost per Model (USD/request, 5m rate)",
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "description": "Rate-based per-request cost: USD accrued per 5-minute window divided by requests served in that window. Prior query plotted gpucast_inference_cost_usd (the lifetime gauge) under the same 'USD/request' title — a cumulative value that only ever goes up, which is NOT per-request cost. The tenant label was dropped from the legend because gpucast removed per-tenant attribution at commit 25f2f7a and the label is always literal 'all'.",
       "targets": [
         {
-          "expr": "gpucast_inference_cost_usd",
-          "legendFormat": "{{ model }} / {{ tenant }}"
+          "expr": "rate(gpucast_inference_cost_usd_total[5m]) / rate(gpucast_inference_requests_total[5m])",
+          "legendFormat": "{{ model }}"
         }
       ],
       "fieldConfig": {

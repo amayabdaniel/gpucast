@@ -9,14 +9,28 @@ spec:
   groups:
     - name: gpucast.inference.cost
       rules:
+        # Per-request inference cost spike. Prior version compared the
+        # lifetime gauge `gpucast_inference_cost_usd` against 0.10 USD —
+        # which fired on any production traffic within seconds, since the
+        # gauge is TOTAL spend since the last vLLM restart and crosses
+        # $0.10 instantly. The description claimed "costs $X/request"
+        # while $value was in fact cumulative lifetime cost; the tenant
+        # label was always literal "all" since gpucast removed the tenant
+        # dimension at 25f2f7a. The rate-based form below is the actual
+        # per-request cost: cost accrued per 5-minute window divided by
+        # requests served in that window. Threshold raised to $0.05/req
+        # which is a defensible per-request alert (a $0.80/hr GPU
+        # generating ~1k tokens/req at 20 tokens/sec costs about $0.011,
+        # so $0.05 flags ~5x normal). The tenant label is dropped from
+        # the description since it carries no information.
         - alert: InferenceCostSpike
-          expr: gpucast_inference_cost_usd > 0.10
+          expr: rate(gpucast_inference_cost_usd_total[5m]) / rate(gpucast_inference_requests_total[5m]) > 0.05
           for: 5m
           labels:
             severity: warning
           annotations:
-            summary: "High inference cost detected"
-            description: "Model {{ "{{" }} $labels.model {{ "}}" }} costs ${{ "{{" }} $value {{ "}}" }}/request for tenant {{ "{{" }} $labels.tenant {{ "}}" }}."
+            summary: "High per-request inference cost detected"
+            description: "Model {{ "{{" }} $labels.model {{ "}}" }} costs ${{ "{{" }} $value {{ "}}" }}/request over the last 5m — rate-based, so a cold-start spike that resolves clears the alert within the window."
 
     - name: gpucast.inference.latency
       rules:
