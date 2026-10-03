@@ -54,14 +54,25 @@ spec:
             summary: "TTFT p95 exceeds 2 seconds"
             description: "Model {{ "{{" }} $labels.model {{ "}}" }} TTFT p95 is {{ "{{" }} $value {{ "}}" }}s (from vLLM's own aggregate, not a histogram quantile)."
 
+        # Prior version was histogram_quantile(0.95, rate(gpucast_gpu
+        # _seconds_per_request_bucket[5m])) > 5.0 against a histogram
+        # fed .Observe(EstimatedGPUSeconds / RequestsTotal) once per
+        # scrape — so what the alert called 'p95' was 95th-percentile
+        # of per-scrape MEANS, not of individual requests. gpucast has
+        # no per-request signal; the honest shape is to alert on the
+        # mean directly. Threshold stays at 5.0s because the semantic
+        # we care about ('this workload is slow') still applies to
+        # the mean — a sustained mean >5s of GPU per request is a
+        # degraded workload regardless of distribution shape. Polarity
+        # 'high is bad', same as TTFT and opposite of KV cache.
         - alert: SlowInferenceRequests
-          expr: histogram_quantile(0.95, rate(gpucast_gpu_seconds_per_request_bucket[5m])) > 5.0
+          expr: gpucast_gpu_seconds_per_request_mean > 5.0
           for: 5m
           labels:
             severity: warning
           annotations:
-            summary: "GPU seconds per request p95 exceeds 5s"
-            description: "Model {{ "{{" }} $labels.model {{ "}}" }} using {{ "{{" }} $value {{ "}}" }}s GPU time per request."
+            summary: "Mean GPU seconds per request exceeds 5s"
+            description: "Model {{ "{{" }} $labels.model {{ "}}" }} averaging {{ "{{" }} $value {{ "}}" }}s GPU time per request this scrape (per-scrape mean, not a percentile — gpucast has no per-request signal)."
 
     - name: gpucast.gpu.efficiency
       rules:

@@ -32,12 +32,22 @@ var (
 		Help:      "Cumulative inference cost in USD across all scrapes, delta-accumulated so it survives vLLM restarts.",
 	}, []string{"model", "tenant", "namespace"})
 
-	// GPUSecondsPerRequest tracks GPU-seconds consumed per request at various percentiles.
-	GPUSecondsPerRequest = prometheus.NewHistogramVec(prometheus.HistogramOpts{
+	// GPUSecondsPerRequestMean carries the per-scrape MEAN GPU-seconds
+	// per request. A prior version declared a HistogramVec and called
+	// .Observe(EstimatedGPUSeconds / RequestsTotal) once per scrape —
+	// so what landed in the histogram was a sequence of per-scrape
+	// means, not individual request samples; histogram_quantile(0.95,
+	// ...) on such a histogram is the 95th percentile of means, not
+	// of requests, and is approximately the mean. The honest shape:
+	// gpucast has no per-request GPU-seconds signal (vLLM /metrics
+	// doesn't expose it), only the per-scrape aggregate derivable
+	// from EstimatedGPUSeconds / RequestsTotal. Emit the mean under a
+	// name that says 'mean' so panels and alerts stop claiming
+	// distribution semantics that aren't there.
+	GPUSecondsPerRequestMean = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: "gpucast",
-		Name:      "gpu_seconds_per_request",
-		Help:      "GPU-seconds consumed per inference request.",
-		Buckets:   []float64{0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.0, 5.0, 10.0},
+		Name:      "gpu_seconds_per_request_mean",
+		Help:      "Mean GPU-seconds per inference request this scrape (EstimatedGPUSeconds / RequestsTotal — NOT a distribution; no per-request sample is available from vLLM /metrics).",
 	}, []string{"model", "tenant"})
 
 	// TokensPerGPUDollar measures token throughput efficiency — higher is better.
@@ -142,7 +152,7 @@ func RegisterAll(reg prometheus.Registerer) {
 	reg.MustRegister(
 		InferenceCostUSD,
 		InferenceCostUSDTotal,
-		GPUSecondsPerRequest,
+		GPUSecondsPerRequestMean,
 		TokensPerGPUDollar,
 		InferenceRequestsTotal,
 		TokensProcessedTotal,

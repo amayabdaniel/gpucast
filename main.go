@@ -138,9 +138,14 @@ func runCollectorLoop(c *collector.VLLMCollector, modelName string, interval tim
 			metrics.TTFTP99Seconds.WithLabelValues(modelName).Set(m.TTFT_P99)
 		}
 
+		// Per-scrape MEAN GPU-seconds per request. Set as a gauge, not
+		// observed into a histogram, because what gpucast has is the
+		// aggregate (EstimatedGPUSeconds / RequestsTotal) — see the
+		// metric godoc for why observing a stream of means into a
+		// histogram and taking quantiles over it was misleading.
 		if m.EstimatedGPUSeconds > 0 && m.RequestsTotal > 0 {
 			avgGPUSec := m.EstimatedGPUSeconds / m.RequestsTotal
-			metrics.GPUSecondsPerRequest.WithLabelValues(modelName, "all").Observe(avgGPUSec)
+			metrics.GPUSecondsPerRequestMean.WithLabelValues(modelName, "all").Set(avgGPUSec)
 		}
 	}
 }

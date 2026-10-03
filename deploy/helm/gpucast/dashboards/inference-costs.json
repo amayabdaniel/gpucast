@@ -25,13 +25,14 @@
       }
     },
     {
-      "title": "GPU Seconds per Request (p95)",
+      "title": "GPU Seconds per Request (per-scrape mean)",
+      "description": "Per-scrape mean GPU-seconds per request. Prior title claimed 'p95' and query was histogram_quantile(0.95, rate(gpu_seconds_per_request_bucket[5m])) — but the backing histogram was fed .Observe(EstimatedGPUSeconds / RequestsTotal) once per scrape (one mean per scrape, not individual request samples), so the 'p95' value was 95th-percentile-of-means, approximately the mean itself. gpucast has no per-request GPU-seconds signal; the mean is the honest aggregate.",
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, rate(gpucast_gpu_seconds_per_request_bucket[5m]))",
-          "legendFormat": "{{ model }} p95"
+          "expr": "gpucast_gpu_seconds_per_request_mean",
+          "legendFormat": "{{ model }} mean"
         }
       ],
       "fieldConfig": {
